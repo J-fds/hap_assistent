@@ -1,0 +1,20 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- 纯色背景 -->
+  <rect width="1024" height="1024" rx="180" ry="180" fill="#4A90E2"/>
+  
+  <!-- 手机轮廓 -->
+  <rect x="350" y="200" width="324" height="624" rx="40" ry="40" fill="white" stroke="none"/>
+  
+  <!-- 手机屏幕 -->
+  <rect x="380" y="260" width="264" height="440" rx="20" ry="20" fill="#E8F4FD"/>
+  
+  <!-- Home按钮 -->
+  <circle cx="512" cy="760" r="20" fill="#4A90E2"/>
+  
+  <!-- 安装箭头 -->
+  <path d="M 450 400 L 512 340 L 574 400 L 550 400 L 550 480 L 474 480 L 474 400 Z" fill="#4A90E2"/>
+  
+  <!-- HAP包图标 -->
+   <rect x="460" y="520" width="104" height="64" rx="8" ry="8" fill="#FF6B35"/>
+   <text x="512" y="560" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">HAP</text>
+</svg>
