@@ -5,7 +5,7 @@ import '../providers/app_provider.dart';
 import '../widgets/device_selector.dart';
 import '../widgets/device_manager.dart';
 import '../widgets/hap_installer.dart';
-import '../widgets/app_manager.dart';
+import '../widgets/package_manager.dart';
 import '../widgets/log_viewer.dart';
 import '../widgets/tools_manager.dart';
 
@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           tabs: const [
             Tab(icon: Icon(Icons.install_mobile), text: 'HAP安装'),
             Tab(icon: Icon(Icons.devices), text: '设备管理'),
-            Tab(icon: Icon(Icons.apps), text: '应用管理'),
+            Tab(icon: Icon(Icons.apps), text: '包管理'),
             Tab(icon: Icon(Icons.terminal), text: '日志'),
           ],
         ),
@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: const [
                 HapInstaller(),
                 DeviceManager(),
-                AppManager(),
+                PackageManager(),
                 LogViewer(),
               ],
             ),

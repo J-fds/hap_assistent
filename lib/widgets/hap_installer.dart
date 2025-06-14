@@ -66,6 +66,94 @@ class HapInstaller extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const Spacer(),
+                // 智能选包开关
+                GestureDetector(
+                  onTap: provider.packageFiles.isNotEmpty
+                      ? () => provider.setAutoSelectLatest(!provider.autoSelectLatest)
+                      : null,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: provider.autoSelectLatest 
+                          ? Colors.blue.shade50 
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: provider.autoSelectLatest 
+                            ? Colors.blue.shade200 
+                            : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                      boxShadow: provider.autoSelectLatest ? [
+                        BoxShadow(
+                          color: Colors.blue.shade100,
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ] : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            provider.autoSelectLatest 
+                                ? Icons.auto_awesome 
+                                : Icons.auto_awesome_outlined,
+                            key: ValueKey(provider.autoSelectLatest),
+                            size: 16,
+                            color: provider.autoSelectLatest 
+                                ? Colors.blue.shade600 
+                                : Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '智能选包',
+                          style: TextStyle(
+                            color: provider.autoSelectLatest 
+                                ? Colors.blue.shade700 
+                                : Colors.grey.shade600,
+                            fontSize: 13,
+                            fontWeight: provider.autoSelectLatest 
+                                ? FontWeight.w600 
+                                : FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 32,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: provider.autoSelectLatest 
+                                ? Colors.blue.shade600 
+                                : Colors.grey.shade300,
+                          ),
+                          child: AnimatedAlign(
+                            duration: const Duration(milliseconds: 200),
+                            alignment: provider.autoSelectLatest 
+                                ? Alignment.centerRight 
+                                : Alignment.centerLeft,
+                            child: Container(
+                              width: 14,
+                              height: 14,
+                              margin: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -81,49 +169,68 @@ class HapInstaller extends StatelessWidget {
   }
 
   Widget _buildFileDropZone(BuildContext context, AppProvider provider) {
-    return Container(
-      width: double.infinity,
-      height: 120,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey.shade300,
-          style: BorderStyle.solid,
-          width: 2,
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          height: 120,
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Colors.grey.shade300,
+              style: BorderStyle.solid,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            color: Colors.grey.shade50,
+          ),
+          child: InkWell(
+            onTap: () => _pickHapFile(context, provider),
+            borderRadius: BorderRadius.circular(8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.folder_shared,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '点击选择HAP文件',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '从共享文件夹选择 (.hap/.app)',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
-      ),
-      child: InkWell(
-        onTap: () => _pickHapFile(context, provider),
-        borderRadius: BorderRadius.circular(8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_upload_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
+        
+        const SizedBox(height: 12),
+        
+        // 本地文件选择按钮
+        Center(
+          child: TextButton.icon(
+            onPressed: () => _pickFromLocalFiles(context, provider),
+            icon: const Icon(Icons.folder_open, size: 16),
+            label: const Text('或从本地选择文件'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey.shade600,
+              textStyle: const TextStyle(fontSize: 14),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '点击选择HAP文件',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '支持 .hap 和 .app 格式',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 12,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -427,28 +534,98 @@ class HapInstaller extends StatelessWidget {
     );
   }
 
+  /// 选择HAP文件 - 默认打开共享文件夹
   Future<void> _pickHapFile(BuildContext context, AppProvider provider) async {
+    await _pickFromSharedFolder(context, provider);
+  }
+
+  Future<void> _pickFromSharedFolder(BuildContext context, AppProvider provider) async {
+    // 刷新包文件列表
+    await provider.refreshPackageFiles();
+    
+    if (provider.packageFiles.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('共享文件夹中没有找到HAP文件'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    // 显示共享文件夹中的文件列表
+    if (context.mounted) {
+      final selectedFile = await showDialog<PackageFile>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('选择HAP文件'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: ListView.builder(
+              itemCount: provider.packageFiles.length,
+              itemBuilder: (context, index) {
+                final file = provider.packageFiles[index];
+                return ListTile(
+                  leading: Icon(
+                    file.type == 'hap' ? Icons.android : Icons.apps,
+                    color: Colors.blue,
+                  ),
+                  title: Text(file.name),
+                  subtitle: Text(
+                    '${_formatFileSize(file.size)} • ${_formatDateTime(file.createdTime)}',
+                  ),
+                  onTap: () => Navigator.of(context).pop(file),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+          ],
+        ),
+      );
+
+      if (selectedFile != null) {
+        provider.selectHapFile(selectedFile.path);
+      }
+    }
+  }
+
+  /// 从本地文件选择
+  Future<void> _pickFromLocalFiles(BuildContext context, AppProvider provider) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['hap', 'app'],
-        dialogTitle: '选择HAP文件',
+        allowMultiple: false,
       );
 
-      if (result != null && result.files.single.path != null) {
-        final hapPath = result.files.single.path!;
-        provider.selectHapFile(hapPath);
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        if (file.path != null) {
+          provider.selectHapFile(file.path!);
+        }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('选择文件失败: $e'),
+            content: Text('选择本地文件失败: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.month}/${dateTime.day} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
   String _getLoadingText(AppProvider provider) {

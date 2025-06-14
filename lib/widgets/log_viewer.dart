@@ -139,15 +139,16 @@ class _LogViewerState extends State<LogViewer> {
         Text(
           '$label: ',
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             fontSize: 12,
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -178,13 +179,13 @@ class _LogViewerState extends State<LogViewer> {
                 Icon(
                   Icons.terminal,
                   size: 16,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   '控制台输出',
                   style: TextStyle(
-                    color: Colors.grey.shade700,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
                   ),
@@ -193,7 +194,7 @@ class _LogViewerState extends State<LogViewer> {
                 Text(
                   '${provider.logs.length} 条记录',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -205,7 +206,7 @@ class _LogViewerState extends State<LogViewer> {
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(12),
                   bottomRight: Radius.circular(12),
@@ -237,20 +238,20 @@ class _LogViewerState extends State<LogViewer> {
               Icon(
                 Icons.description_outlined,
                 size: 64,
-                color: Colors.grey.shade400,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
               ),
               const SizedBox(height: 16),
               Text(
                 '暂无日志记录',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '应用运行时的日志信息将显示在这里',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey.shade500,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -264,12 +265,15 @@ class _LogViewerState extends State<LogViewer> {
   Widget _buildLogItem(String log, int index) {
     final isEven = index % 2 == 0;
     final logLevel = _getLogLevel(log);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isEven ? Colors.white : Colors.grey.shade100,
+        color: isEven 
+            ? Theme.of(context).colorScheme.surface
+            : Theme.of(context).colorScheme.surface.withOpacity(0.5),
         border: Border(
           left: BorderSide(
             color: _getLogLevelColor(logLevel),
@@ -287,7 +291,7 @@ class _LogViewerState extends State<LogViewer> {
             child: Text(
               '${index + 1}',
               style: TextStyle(
-                color: Colors.grey.shade500,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 fontSize: 11,
                 fontFamily: 'monospace',
               ),
@@ -305,10 +309,11 @@ class _LogViewerState extends State<LogViewer> {
           Expanded(
             child: SelectableText(
               log,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontFamily: 'monospace',
                 height: 1.3,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

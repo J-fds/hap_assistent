@@ -1,5 +1,23 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../services/harmony_service.dart';
+
+// 包文件信息类
+class PackageFile {
+  final String name;
+  final String path;
+  final String type; // 'hap' 或 'app'
+  final DateTime createdTime;
+  final int size;
+  
+  PackageFile({
+    required this.name,
+    required this.path,
+    required this.type,
+    required this.createdTime,
+    required this.size,
+  });
+}
 
 class AppProvider extends ChangeNotifier {
   final HarmonyService _harmonyService = HarmonyService();
@@ -19,6 +37,14 @@ class AppProvider extends ChangeNotifier {
   String? _selectedHapPath;
   List<String> _installedApps = [];
   
+  // 包管理相关
+  String _packageServerIp = '10.44.139.92'; // 默认打包机IP
+  String _sharedFolderPath = '/Users/customer/harmony/haps/'; // 默认HAP文件路径
+  List<PackageFile> _packageFiles = [];
+  bool _isLoadingPackages = false;
+  Map<String, double> _installProgress = {}; // 安装进度
+  bool _autoSelectLatest = true; // 自动选择最新包开关
+  
   // 日志
   List<String> _logs = [];
 
@@ -33,6 +59,14 @@ class AppProvider extends ChangeNotifier {
   String? get selectedHapPath => _selectedHapPath;
   List<String> get installedApps => _installedApps;
   List<String> get logs => _logs;
+  
+  // 包管理相关getters
+  String get packageServerIp => _packageServerIp;
+  String get sharedFolderPath => _sharedFolderPath;
+  List<PackageFile> get packageFiles => _packageFiles;
+  bool get isLoadingPackages => _isLoadingPackages;
+  Map<String, double> get installProgress => _installProgress;
+  bool get autoSelectLatest => _autoSelectLatest;
 
   /// 初始化应用
   Future<void> initialize() async {
@@ -48,6 +82,10 @@ class AppProvider extends ChangeNotifier {
         // 延迟刷新设备列表，避免在初始化时触发状态更新冲突
         Future.delayed(const Duration(milliseconds: 100), () {
           refreshDevices();
+        });
+        // 自动获取共享文件夹的包文件列表
+        Future.delayed(const Duration(milliseconds: 200), () {
+          refreshPackageFiles();
         });
       } else {
         _setStatus('需要下载鸿蒙开发工具');
@@ -285,6 +323,148 @@ class AppProvider extends ChangeNotifier {
     }
     
     notifyListeners();
+  }
+  
+  /// 设置包服务器配置
+  void setPackageServerConfig(String ip, String folderPath) {
+    _packageServerIp = ip;
+    _sharedFolderPath = folderPath;
+    _addLog('更新包服务器配置: $ip$folderPath');
+    notifyListeners();
+  }
+
+  /// 获取共享文件夹的完整路径（根据操作系统）
+  String getSharedFolderFullPath() {
+    if (Platform.isWindows) {
+      // Windows: \\IP\共享文件夹名\路径
+      return '\\\\$_packageServerIp\\harmony\\haps\\';
+    } else if (Platform.isMacOS) {
+      // macOS: smb://IP/共享文件夹名/路径
+      return 'smb://$_packageServerIp$_sharedFolderPath';
+    } else {
+      // Linux等其他系统
+      return '//$_packageServerIp$_sharedFolderPath';
+    }
+  }
+  
+  /// 刷新包文件列表
+  Future<void> refreshPackageFiles() async {
+    _isLoadingPackages = true;
+    notifyListeners();
+    
+    try {
+      _addLog('正在刷新包文件列表...');
+      _addLog('连接路径: ${getSharedFolderFullPath()}');
+      
+      // 模拟网络请求延迟
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // 模拟获取文件列表
+      _packageFiles = [
+        PackageFile(
+          name: 'com.example.app_v1.0.0.hap',
+          path: '${getSharedFolderFullPath()}com.example.app_v1.0.0.hap',
+          type: 'hap',
+          createdTime: DateTime.now().subtract(const Duration(hours: 2)),
+          size: 1024 * 1024 * 5, // 5MB
+        ),
+        PackageFile(
+          name: 'com.test.demo_v2.1.0.app',
+          path: '${getSharedFolderFullPath()}com.test.demo_v2.1.0.app',
+          type: 'app',
+          createdTime: DateTime.now().subtract(const Duration(hours: 1)),
+          size: 1024 * 1024 * 8, // 8MB
+        ),
+        PackageFile(
+          name: 'com.harmony.sample_v1.2.3.hap',
+          path: '${getSharedFolderFullPath()}com.harmony.sample_v1.2.3.hap',
+          type: 'hap',
+          createdTime: DateTime.now().subtract(const Duration(minutes: 30)),
+          size: 1024 * 1024 * 3, // 3MB
+        ),
+      ];
+      
+      // 按创建时间排序（最新的在前）
+      _packageFiles.sort((a, b) => b.createdTime.compareTo(a.createdTime));
+      
+      _addLog('找到 ${_packageFiles.length} 个包文件');
+      
+      // 如果开启自动选择最新包，则自动选择
+      if (_autoSelectLatest && _packageFiles.isNotEmpty) {
+        selectLatestPackageFile();
+      }
+    } catch (e) {
+      _addLog('刷新包文件列表失败: $e');
+    } finally {
+      _isLoadingPackages = false;
+      notifyListeners();
+    }
+  }
+  
+  /// 设置自动选择最新包开关
+  void setAutoSelectLatest(bool value) {
+    _autoSelectLatest = value;
+    _addLog('${value ? '开启' : '关闭'}自动选择最新包');
+    
+    // 如果开启且有包文件，立即选择最新的
+    if (value && _packageFiles.isNotEmpty) {
+      selectLatestPackageFile();
+    }
+    
+    notifyListeners();
+  }
+  
+  /// 自动选择最新的包文件
+  void selectLatestPackageFile() {
+    if (_packageFiles.isNotEmpty) {
+      // 包文件已经按创建时间排序，第一个就是最新的
+      final latestFile = _packageFiles.first;
+      selectHapFile(latestFile.path);
+      _addLog('自动选择最新包文件: ${latestFile.name}');
+    } else {
+      _addLog('没有找到可用的包文件');
+    }
+  }
+  
+  /// 安装包文件
+  Future<bool> installPackageFile(PackageFile packageFile) async {
+    if (_selectedDevice == null) {
+      _addLog('请先选择目标设备');
+      return false;
+    }
+    
+    final packageId = packageFile.name;
+    _installProgress[packageId] = 0.0;
+    notifyListeners();
+    
+    try {
+      _addLog('开始安装包: ${packageFile.name}');
+      
+      // 模拟安装进度
+      for (int i = 0; i <= 100; i += 10) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        _installProgress[packageId] = i / 100.0;
+        notifyListeners();
+      }
+      
+      // 模拟安装结果
+      final success = DateTime.now().millisecond % 2 == 0; // 随机成功/失败
+      
+      if (success) {
+        _addLog('包安装成功: ${packageFile.name}');
+        await refreshInstalledApps();
+      } else {
+        _addLog('包安装失败: ${packageFile.name}');
+      }
+      
+      return success;
+    } catch (e) {
+      _addLog('安装错误: $e');
+      return false;
+    } finally {
+      _installProgress.remove(packageId);
+      notifyListeners();
+    }
   }
 
   @override
