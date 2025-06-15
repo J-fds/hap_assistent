@@ -43,11 +43,14 @@ jobs:
         # 复制应用到临时目录
         cp -R "build/macos/Build/Products/Release/hap_assistant.app" dmg-temp/
         
+        # 清理可能存在的旧DMG文件
+        rm -f *.dmg
+        
         # 创建 DMG 文件
         create-dmg "HAP-Assistant-macOS.dmg" "dmg-temp"
         
-        # 重命名生成的文件（如果需要）
-        if [ -f "rw.*.HAP-Assistant-macOS.dmg" ]; then
+        # 重命名生成的文件（create-dmg会生成带随机前缀的文件名）
+        if ls rw.*.HAP-Assistant-macOS.dmg 1> /dev/null 2>&1; then
           mv rw.*.HAP-Assistant-macOS.dmg HAP-Assistant-macOS.dmg
         fi
         
