@@ -14,7 +14,6 @@
 
 - ✅ Windows 10/11 (x64)
 - ✅ macOS 10.14+
-- ✅ Linux (Ubuntu 18.04+)
 
 ## 安装方法
 
@@ -29,10 +28,6 @@
 1. 从 [Releases](https://github.com/your-username/hap_assistant/releases) 页面下载 `.dmg` 文件
 2. 双击打开并将应用拖拽到应用程序文件夹
 
-### Linux
-
-1. 从 [Releases](https://github.com/your-username/hap_assistant/releases) 页面下载对应的包文件
-2. 使用包管理器安装或直接运行可执行文件
 
 ## 开发环境
 
