@@ -43,12 +43,7 @@ jobs:
         copy "build\windows\x64\runner\Release\hap_assistant.exe" "single-file\"
         copy "build\windows\x64\runner\Release\flutter_windows.dll" "single-file\"
         
-    - name: Create MSIX Package
-      run: |
-        flutter pub add msix
-        flutter pub get
-        flutter build windows --release
-        dart run msix:create --store
+    # MSIX Package creation removed to avoid configuration issues
         
     - name: Upload Portable Package
       uses: actions/upload-artifact@v4
@@ -62,11 +57,7 @@ jobs:
         name: windows-single-file
         path: single-file/
         
-    - name: Upload MSIX Package
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-msix
-        path: build/windows/x64/runner/Release/*.msix
+    # MSIX Package upload removed
         
     - name: Create Release Packages
       if: startsWith(github.ref, 'refs/tags/')
@@ -76,9 +67,7 @@ jobs:
         cd ../single-file
         tar -czf ../hap_assistant_windows_single_${{ github.ref_name }}.tar.gz *
         cd ..
-        if exist "build\windows\x64\runner\Release\*.msix" (
-          copy "build\windows\x64\runner\Release\*.msix" "hap_assistant_windows_store_${{ github.ref_name }}.msix"
-        )
+        # MSIX package creation removed
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
@@ -87,7 +76,6 @@ jobs:
         files: |
           hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz
           hap_assistant_windows_single_${{ github.ref_name }}.tar.gz
-          hap_assistant_windows_store_${{ github.ref_name }}.msix
         name: Release ${{ github.ref_name }}
         body: |
           ## 鸿蒙HAP安装助手 ${{ github.ref_name }}
@@ -112,11 +100,10 @@ jobs:
           - 体积更小，启动更快
           - 需要系统已安装Visual C++运行库
           
-          #### 3. 应用商店版 (MSIX)
-          - 文件: `hap_assistant_windows_store_${{ github.ref_name }}.msix`
-          - 标准Windows应用包格式
-          - 支持自动更新和沙盒安全
-          - 可通过Microsoft Store分发
+          #### 注意事项
+          - 便携版包含完整运行环境，推荐使用
+          - 精简版需要系统预装Visual C++运行库
+          - 两个版本都支持Windows 10及以上系统
           
           ### 共享文件夹连接优化
           - **Windows**: 支持UNC路径 (`\\IP\共享文件夹\路径`)

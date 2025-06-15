@@ -267,15 +267,16 @@ class HapInstaller extends StatelessWidget {
               children: [
                 Text(
                   fileName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w500,
+                    color: Colors.green.shade700,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   fileSize,
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: Colors.green.shade600,
                     fontSize: 12,
                   ),
                 ),
