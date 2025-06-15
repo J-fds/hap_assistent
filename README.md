@@ -19,13 +19,13 @@
 
 ### Windows
 
-1. 从 [Releases](https://github.com/your-username/hap_assistant/releases) 页面下载最新的 `HAP_Assistant_Setup.exe`
+1. 从 [Releases](https://github.com/J-fds/hap_assistent.git/releases) 页面下载最新的 `HAP_Assistant_Setup.exe`
 2. 以管理员权限运行安装程序
 3. 按照安装向导完成安装
 
 ### macOS
 
-1. 从 [Releases](https://github.com/your-username/hap_assistant/releases) 页面下载 `.dmg` 文件
+1. 从 [Releases](https://github.com/J-fds/hap_assistent.git/releases) 页面下载 `.dmg` 文件
 2. 双击打开并将应用拖拽到应用程序文件夹
 
 
@@ -41,7 +41,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/hap_assistant.git
+git clone https://github.com/J-fds/hap_assistent.git
 cd hap_assistant
 
 # 安装依赖
@@ -152,7 +152,7 @@ hap_assistant/
 
 如果您遇到问题或有建议，请：
 
-1. 查看 [Issues](https://github.com/your-username/hap_assistant/issues)
+1. 查看 [Issues](https://github.com/J-fds/hap_assistent.git/issues)
 2. 创建新的 Issue
 3. 联系开发团队
 
