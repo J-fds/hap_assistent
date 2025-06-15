@@ -1,0 +1,88 @@
+name: Build macOS DMG
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.19.6'
+        channel: 'stable'
+        
+    - name: Enable macOS desktop
+      run: flutter config --enable-macos-desktop
+      
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Build macOS app
+      run: flutter build macos --release
+      
+    - name: Create DMG
+      run: |
+        # 安装 create-dmg 工具
+        brew install create-dmg
+        
+        # 创建临时目录
+        mkdir -p dmg-temp
+        
+        # 复制应用到临时目录
+        cp -R "build/macos/Build/Products/Release/hap_assistant.app" dmg-temp/
+        
+        # 创建 DMG 文件
+        create-dmg "HAP-Assistant-macOS.dmg" "dmg-temp"
+        
+        # 重命名生成的文件（如果需要）
+        if [ -f "rw.*.HAP-Assistant-macOS.dmg" ]; then
+          mv rw.*.HAP-Assistant-macOS.dmg HAP-Assistant-macOS.dmg
+        fi
+        
+        # 清理临时目录
+        rm -rf dmg-temp
+        
+    - name: Upload DMG
+      uses: actions/upload-artifact@v4
+      with:
+        name: HAP-Assistant-macOS-DMG
+        path: HAP-Assistant-macOS.dmg
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          HAP-Assistant-macOS.dmg
+        body: |
+          ## macOS 版本
+          
+          ### 安装说明
+          1. 下载 `HAP-Assistant-macOS.dmg` 文件
+          2. 双击打开 DMG 文件
+          3. 将 HAP Assistant 应用拖拽到 Applications 文件夹
+          4. 在 Applications 文件夹中启动应用
+          
+          ### 系统要求
+          - macOS 10.14 或更高版本
+          - 64位处理器
+          
+          ### 功能特性
+          - HAP 应用包安装
+          - 设备管理
+          - 应用管理
+          - 日志查看
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

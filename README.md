@@ -83,8 +83,13 @@ flutter build macos --release
    - 每次推送和PR时触发
 
 2. **Windows构建** (`.github/workflows/build-windows.yml`)
-   - 自动构建Windows安装包
-   - 使用NSIS创建安装程序
+   - 自动构建Windows便携版和精简版
+   - 生成可执行文件包
+   - 标签推送时自动发布Release
+
+3. **macOS构建** (`.github/workflows/build-macos.yml`)
+   - 自动构建macOS应用
+   - 生成DMG安装包
    - 标签推送时自动发布Release
 
 ### 发布流程
