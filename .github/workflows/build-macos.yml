@@ -112,5 +112,3 @@ jobs:
           - 设备管理
           - 应用管理
           - 日志查看
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
