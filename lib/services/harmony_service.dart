@@ -164,7 +164,7 @@ class HarmonyService {
   }
   
   /// 获取当前使用的hdc工具路径
-  String _getHdcPath() {
+  String getHdcPath() {
     return _hdcPath ?? _getExternalHdcPath();
   }
 
@@ -209,7 +209,7 @@ class HarmonyService {
       
       // 设置执行权限（macOS/Linux）
       if (!_platform.isWindows) {
-        await _setExecutePermission(_getHdcPath());
+        await _setExecutePermission(getHdcPath());
       }
 
       _isToolsInstalled = true;
@@ -341,9 +341,9 @@ class HarmonyService {
 
     try {
       // 在macOS上，尝试从临时目录执行hdc
-      String hdcPath = _getHdcPath();
+      String hdcPath = getHdcPath();
       if (_platform.isMacOS) {
-        hdcPath = await _copyToTempAndExecute(_getHdcPath());
+        hdcPath = await _copyToTempAndExecute(getHdcPath());
       }
       
       final result = await _processManager.run([
@@ -386,9 +386,9 @@ class HarmonyService {
       _logger.i('开始安装HAP包: $hapPath');
       
       // 在macOS上，尝试从临时目录执行hdc
-      String hdcPath = _getHdcPath();
+      String hdcPath = getHdcPath();
       if (_platform.isMacOS) {
-        hdcPath = await _copyToTempAndExecute(_getHdcPath());
+        hdcPath = await _copyToTempAndExecute(getHdcPath());
       }
       
       // 生成随机临时目录名
@@ -472,7 +472,7 @@ class HarmonyService {
     try {
       _logger.i('开始卸载应用: $packageName');
       
-      final args = [_getHdcPath()];
+      final args = [getHdcPath()];
       
       if (deviceId != null && deviceId.isNotEmpty) {
         args.addAll(['-t', deviceId]);
@@ -502,7 +502,7 @@ class HarmonyService {
     }
 
     try {
-      final args = [_getHdcPath()];
+      final args = [getHdcPath()];
       
       if (deviceId != null && deviceId.isNotEmpty) {
         args.addAll(['-t', deviceId]);
