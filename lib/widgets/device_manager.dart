@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../services/network_hdc_service.dart';
 
 class DeviceManager extends StatelessWidget {
   const DeviceManager({super.key});
@@ -9,146 +10,201 @@ class DeviceManager extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppProvider>(
       builder: (context, provider, child) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              // 标题和刷新按钮
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '设备管理',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: provider.isLoading ? null : () {
-                      provider.refreshDevices();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('刷新'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              // 设备列表
-              _buildDeviceList(context, provider),
-              
-              const SizedBox(height: 24),
-              
-              // 连接说明
-              _buildConnectionGuide(context),
-            ],
+                // 标题和操作按钮
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '设备管理',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: provider.isLoading ? null : () {
+                            _showAddNetworkDeviceDialog(context, provider);
+                          },
+                          icon: const Icon(Icons.wifi),
+                          label: const Text('添加网络设备'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: provider.isLoading ? null : () {
+                            provider.refreshDevices();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('刷新'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                // 设备列表
+                _buildDeviceList(context, provider),
+                
+                const SizedBox(height: 16),
+                
+                // 连接说明
+                _buildConnectionGuide(context),
+              ],
+            ),
           ),
-        ),
       );
-      },
+    },
     );
   }
 
   Widget _buildDeviceList(BuildContext context, AppProvider provider) {
+    // 创建一个容器来包装设备列表区域，添加边框样式
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withOpacity(0.3), width: 2),
+      ),
+      child: _buildDeviceContent(context, provider),
+    );
+  }
+
+  Widget _buildDeviceContent(BuildContext context, AppProvider provider) {
     // 如果正在加载，显示加载指示器
     if (provider.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('正在扫描设备...'),
-          ],
+      return Container(
+        height: 230,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                color: Colors.orange,
+                strokeWidth: 3,
+              ),
+              SizedBox(height: 16),
+              Text(
+                '正在扫描设备...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
     
     // 如果工具未安装，显示提示
     if (!provider.isToolsInstalled) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.warning_outlined,
-              size: 64,
-              color: Colors.orange,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '鸿蒙开发工具未安装',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '请先下载并安装鸿蒙开发工具',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
+      return Container(
+        height: 200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.warning_outlined,
+                size: 64,
+                color: Colors.orange,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '鸿蒙开发工具未安装',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '请先下载并安装鸿蒙开发工具',
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
     
     // 如果设备列表为空，显示空状态
     if (provider.connectedDevices.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.smartphone_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '未发现设备',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '当前没有设备连接到电脑\n请确保设备已连接并开启开发者模式',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
-              ),
-              child: Text(
-                '提示：hdc list targets 返回 [Empty]',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.blue[700],
-                  fontFamily: 'monospace',
+      return Container(
+        height: 230,
+        child: SingleChildScrollView(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.smartphone_outlined,
+                  size: 48,
+                  color: const Color.fromARGB(255, 112, 104, 104),
                 ),
-                textAlign: TextAlign.center,
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  '未发现设备',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '当前没有设备连接到电脑',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+                Text(
+                  '请确保设备已连接并开启开发者模式',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'hdc list targets 返回 [Empty]',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.blue[700],
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => provider.refreshDevices(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('重新扫描'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => provider.refreshDevices(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('重新扫描'),
-            ),
-          ],
+          ),
         ),
       );
     }
     
     // 显示所有设备列表
-    return Container(
-      constraints: const BoxConstraints(
-        minHeight: 240, // 增加最小高度，确保设备列表区域不被下面内容遮挡
-        maxHeight: 400,
-      ),
-      child: ListView.builder(
-        shrinkWrap: true,
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
         itemCount: provider.connectedDevices.length,
         itemBuilder: (context, index) {
           final device = provider.connectedDevices[index];
@@ -244,6 +300,135 @@ class DeviceManager extends StatelessWidget {
             ),
           );
         },
+      );
+  }
+
+  void _showAddNetworkDeviceDialog(BuildContext context, AppProvider provider) {
+    final TextEditingController ipController = TextEditingController();
+    final TextEditingController portController = TextEditingController();
+    bool isConnecting = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.wifi, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('添加网络设备'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: ipController,
+                decoration: const InputDecoration(
+                  labelText: 'IP地址',
+                  hintText: '例如: 192.168.1.100',
+                  prefixIcon: Icon(Icons.computer),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: portController,
+                decoration: const InputDecoration(
+                  labelText: '端口号',
+                  hintText: '例如: 37309',
+                  prefixIcon: Icon(Icons.settings_ethernet),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              if (isConnecting)
+                const Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('正在连接设备...'),
+                  ],
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isConnecting ? null : () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: isConnecting ? null : () async {
+                final ip = ipController.text.trim();
+                final portText = portController.text.trim();
+                
+                if (ip.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('请输入IP地址'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                int port = 8710;
+                if (portText.isNotEmpty) {
+                  port = int.tryParse(portText) ?? 8710;
+                }
+                
+                setState(() {
+                  isConnecting = true;
+                });
+                
+                try {
+                  final networkService = NetworkHdcService();
+                  final success = await networkService.connectToDeviceWithPort(ip, port);
+                  
+                  setState(() {
+                    isConnecting = false;
+                  });
+                  
+                  if (success) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('成功连接到设备 $ip:$port'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                    // 刷新设备列表
+                    provider.refreshDevices();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('连接设备失败 $ip:$port'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setState(() {
+                    isConnecting = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('连接出错: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('连接'),
+            ),
+          ],
+        ),
       ),
     );
   }

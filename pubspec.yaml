@@ -49,6 +49,9 @@ dependencies:
   # 状态管理
   provider: ^6.1.1
   
+  # 网络功能
+  network_info_plus: ^4.1.0
+  
   # 日志
   logger: ^2.0.2
   

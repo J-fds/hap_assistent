@@ -8,6 +8,7 @@ import '../widgets/hap_installer.dart';
 import '../widgets/package_manager.dart';
 import '../widgets/log_viewer.dart';
 import '../widgets/tools_manager.dart';
+import '../widgets/network_device_manager.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +35,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // 切换到设备管理标签页
+  void switchToDeviceTab() {
+    _tabController.animateTo(1); // 设备管理是第2个标签页，索引为1
   }
 
   @override

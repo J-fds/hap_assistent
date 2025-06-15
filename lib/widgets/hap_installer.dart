@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../providers/app_provider.dart';
 import '../models/package_file.dart';
+import '../services/network_hdc_service.dart';
+import '../screens/home_screen.dart';
 
 class HapInstaller extends StatelessWidget {
   const HapInstaller({super.key});
@@ -333,118 +335,15 @@ class HapInstaller extends StatelessWidget {
             const SizedBox(height: 12),
             
             if (provider.connectedDevices.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  border: Border.all(color: Colors.orange.shade200),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.warning_amber,
-                      color: Colors.orange.shade600,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '未发现连接的设备',
-                      style: TextStyle(
-                        color: Colors.orange.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '请确保设备已连接并开启USB调试',
-                      style: TextStyle(
-                        color: Colors.orange.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else if (provider.selectedDevice != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  border: Border.all(color: Colors.green.shade200),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.smartphone,
-                      color: Colors.green.shade600,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '鸿蒙设备',
-                            style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'ID: ${provider.selectedDevice}',
-                            style: TextStyle(
-                              color: Colors.green.shade600,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green.shade600,
-                    ),
-                  ],
-                ),
-              )
+              _buildNoDeviceWarning(context)
             else
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  border: Border.all(color: Colors.blue.shade200),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.touch_app,
-                      color: Colors.blue.shade600,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '请在设备管理中选择目标设备',
-                      style: TextStyle(
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '发现 ${provider.connectedDevices.length} 个可用设备',
-                      style: TextStyle(
-                        color: Colors.blue.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _buildDeviceList(context, provider),
+            
+            const SizedBox(height: 12),
+            
+            // 网络设备选择提示
+            _buildNetworkDeviceHint(context),
+
           ],
         ),
       ),
@@ -475,9 +374,13 @@ class HapInstaller extends StatelessWidget {
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: canInstall 
-            ? Theme.of(context).colorScheme.primary
-            : null,
-          foregroundColor: canInstall ? Colors.white : null,
+            ? Colors.blue[600]
+            : Colors.grey[300],
+          foregroundColor: canInstall 
+            ? Colors.white 
+            : Colors.grey[600],
+          elevation: canInstall ? 2 : 0,
+          shadowColor: canInstall ? Colors.blue.withOpacity(0.3) : null,
         ),
       ),
     );
@@ -804,6 +707,192 @@ class HapInstaller extends StatelessWidget {
         ),
       );
     }
+  }
+
+  Widget _buildNoDeviceWarning(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        border: Border.all(color: Colors.orange.shade200),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.warning_amber,
+            color: Colors.orange.shade600,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '未发现连接的设备',
+            style: TextStyle(
+              color: Colors.orange.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '请确保设备已连接并开启USB调试，或使用网络设备功能',
+            style: TextStyle(
+              color: Colors.orange.shade600,
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDeviceList(BuildContext context, AppProvider provider) {
+    if (provider.selectedDevice != null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          border: Border.all(color: Colors.green.shade200),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.smartphone,
+              color: Colors.green.shade600,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '已选择设备',
+                    style: TextStyle(
+                      color: Colors.green.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'ID: ${provider.selectedDevice}',
+                    style: TextStyle(
+                      color: Colors.green.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          border: Border.all(color: Colors.blue.shade200),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.touch_app,
+              color: Colors.blue.shade600,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '请在设备管理中选择目标设备',
+              style: TextStyle(
+                color: Colors.blue.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '发现 ${provider.connectedDevices.length} 个可用设备',
+              style: TextStyle(
+                color: Colors.blue.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+  
+  Widget _buildNetworkDeviceHint(BuildContext context) {
+    return Consumer<AppProvider>(
+      builder: (context, provider, child) {
+        // 如果已经有设备连接，则不显示网络设备提示
+        if (provider.connectedDevices.isNotEmpty) {
+          return const SizedBox.shrink();
+        }
+        
+        return InkWell(
+          onTap: () {
+            // 切换到设备管理标签页
+            // 查找父级的 HomeScreen 并切换到设备管理标签页
+            final homeScreenState = context.findAncestorStateOfType<State<HomeScreen>>();
+            if (homeScreenState != null && homeScreenState is State<HomeScreen>) {
+              // 调用切换方法
+              (homeScreenState as dynamic).switchToDeviceTab();
+            } else {
+              // 如果找不到HomeScreen，显示提示
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('请切换到设备管理标签页进行设备连接'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade50,
+              border: Border.all(color: Colors.purple.shade200),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.wifi,
+                  color: Colors.purple.shade600,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '也可以使用"网络设备"功能进行无线连接和安装',
+                    style: TextStyle(
+                      color: Colors.purple.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.purple.shade600,
+                  size: 12,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   String _formatFileSize(int bytes) {
