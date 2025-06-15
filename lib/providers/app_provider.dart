@@ -1,26 +1,16 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../services/harmony_service.dart';
-
-// 包文件信息类
-class PackageFile {
-  final String name;
-  final String path;
-  final String type; // 'hap' 或 'app'
-  final DateTime createdTime;
-  final int size;
-  
-  PackageFile({
-    required this.name,
-    required this.path,
-    required this.type,
-    required this.createdTime,
-    required this.size,
-  });
-}
+import '../services/package_service.dart';
+import '../models/device.dart';
+import '../models/app.dart';
+import '../models/package_file.dart';
 
 class AppProvider extends ChangeNotifier {
   final HarmonyService _harmonyService = HarmonyService();
+  final PackageService _packageService = PackageService();
   
   // 应用状态
   bool _isInitialized = false;
@@ -333,17 +323,62 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 设置包服务器IP地址
+  void setPackageServerIp(String ip) {
+    _packageServerIp = ip;
+    _addLog('更新打包机IP: $ip');
+    notifyListeners();
+  }
+
+  /// 设置共享文件夹路径
+  void setSharedFolderPath(String folderPath) {
+    _sharedFolderPath = folderPath;
+    _addLog('更新文件路径: $folderPath');
+    notifyListeners();
+  }
+
   /// 获取共享文件夹的完整路径（根据操作系统）
   String getSharedFolderFullPath() {
     if (Platform.isWindows) {
       // Windows: \\IP\共享文件夹名\路径
-      return '\\\\$_packageServerIp\\harmony\\haps\\';
+      // 支持UNC路径和映射网络驱动器
+      if (_sharedFolderPath.startsWith('/')) {
+        // 如果路径以/开头，转换为Windows格式
+        String windowsPath = _sharedFolderPath.replaceAll('/', '\\');
+        return '\\\\$_packageServerIp$windowsPath';
+      } else {
+        // 默认harmony共享文件夹
+        return '\\\\$_packageServerIp\\harmony\\haps\\';
+      }
     } else if (Platform.isMacOS) {
       // macOS: smb://IP/共享文件夹名/路径
-      return 'smb://$_packageServerIp$_sharedFolderPath';
+      // 支持SMB协议连接
+      if (_sharedFolderPath.startsWith('/')) {
+        return 'smb://$_packageServerIp$_sharedFolderPath';
+      } else {
+        return 'smb://$_packageServerIp/harmony/haps/';
+      }
     } else {
-      // Linux等其他系统
-      return '//$_packageServerIp$_sharedFolderPath';
+      // Linux等其他系统: //IP/共享文件夹名/路径
+      if (_sharedFolderPath.startsWith('/')) {
+        return '//$_packageServerIp$_sharedFolderPath';
+      } else {
+        return '//$_packageServerIp/harmony/haps/';
+      }
+    }
+  }
+
+  /// 获取本地挂载路径（用于文件操作）
+  String getLocalMountPath() {
+    if (Platform.isWindows) {
+      // Windows可以直接使用UNC路径
+      return getSharedFolderFullPath();
+    } else if (Platform.isMacOS) {
+      // macOS挂载点通常在/Volumes/下
+      return '/Volumes/harmony/haps/';
+    } else {
+      // Linux挂载点
+      return '/mnt/harmony/haps/';
     }
   }
   
@@ -354,40 +389,22 @@ class AppProvider extends ChangeNotifier {
     
     try {
       _addLog('正在刷新包文件列表...');
-      _addLog('连接路径: ${getSharedFolderFullPath()}');
+      _addLog('连接打包机: $_packageServerIp');
+      _addLog('文件路径: $_sharedFolderPath');
       
-      // 模拟网络请求延迟
-      await Future.delayed(const Duration(seconds: 1));
+      // 首先检查打包机连接状态
+      final isConnected = await _packageService.checkConnection(_packageServerIp);
+      if (!isConnected) {
+        throw Exception('无法连接到打包机 $_packageServerIp，请检查IP地址和网络连接');
+      }
       
-      // 模拟获取文件列表
-      _packageFiles = [
-        PackageFile(
-          name: 'com.example.app_v1.0.0.hap',
-          path: '${getSharedFolderFullPath()}com.example.app_v1.0.0.hap',
-          type: 'hap',
-          createdTime: DateTime.now().subtract(const Duration(hours: 2)),
-          size: 1024 * 1024 * 5, // 5MB
-        ),
-        PackageFile(
-          name: 'com.test.demo_v2.1.0.app',
-          path: '${getSharedFolderFullPath()}com.test.demo_v2.1.0.app',
-          type: 'app',
-          createdTime: DateTime.now().subtract(const Duration(hours: 1)),
-          size: 1024 * 1024 * 8, // 8MB
-        ),
-        PackageFile(
-          name: 'com.harmony.sample_v1.2.3.hap',
-          path: '${getSharedFolderFullPath()}com.harmony.sample_v1.2.3.hap',
-          type: 'hap',
-          createdTime: DateTime.now().subtract(const Duration(minutes: 30)),
-          size: 1024 * 1024 * 3, // 3MB
-        ),
-      ];
+      // 从打包机获取包文件列表
+      _packageFiles = await _packageService.fetchPackageFiles(
+        _packageServerIp,
+        _sharedFolderPath,
+      );
       
-      // 按创建时间排序（最新的在前）
-      _packageFiles.sort((a, b) => b.createdTime.compareTo(a.createdTime));
-      
-      _addLog('找到 ${_packageFiles.length} 个包文件');
+      _addLog('成功获取到 ${_packageFiles.length} 个包文件');
       
       // 如果开启自动选择最新包，则自动选择
       if (_autoSelectLatest && _packageFiles.isNotEmpty) {
@@ -395,6 +412,8 @@ class AppProvider extends ChangeNotifier {
       }
     } catch (e) {
       _addLog('刷新包文件列表失败: $e');
+      // 如果网络请求失败，清空包文件列表
+      _packageFiles = [];
     } finally {
       _isLoadingPackages = false;
       notifyListeners();
@@ -470,6 +489,7 @@ class AppProvider extends ChangeNotifier {
   @override
   void dispose() {
     _harmonyService.dispose();
+    _packageService.dispose();
     super.dispose();
   }
 }

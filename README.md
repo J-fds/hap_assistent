@@ -55,12 +55,10 @@ flutter pub get
 # 启用桌面平台支持
 flutter config --enable-windows-desktop
 flutter config --enable-macos-desktop
-flutter config --enable-linux-desktop
 
 # 运行应用
 flutter run -d windows  # Windows
 flutter run -d macos    # macOS
-flutter run -d linux    # Linux
 ```
 
 ### 构建发布版本
@@ -71,9 +69,6 @@ flutter build windows --release
 
 # macOS
 flutter build macos --release
-
-# Linux
-flutter build linux --release
 ```
 
 ## CI/CD
@@ -164,3 +159,6 @@ hap_assistant/
 ---
 
 **注意**: 请确保您的设备已启用开发者模式并正确连接，以便使用HAP安装功能。
+**windows**： windows上运行时可能会报错
+下载后安装
+https://aka.ms/vs/17/release/vc_redist.x64.exe

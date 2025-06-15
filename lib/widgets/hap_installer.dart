@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../providers/app_provider.dart';
+import '../models/package_file.dart';
 
 class HapInstaller extends StatelessWidget {
   const HapInstaller({super.key});
@@ -68,10 +70,15 @@ class HapInstaller extends StatelessWidget {
                 ),
                 const Spacer(),
                 // 智能选包开关
-                GestureDetector(
-                  onTap: provider.packageFiles.isNotEmpty
-                      ? () => provider.setAutoSelectLatest(!provider.autoSelectLatest)
-                      : null,
+                InkWell(
+                  onTap: () {
+                    // 添加触觉反馈
+                    HapticFeedback.lightImpact();
+                    provider.setAutoSelectLatest(!provider.autoSelectLatest);
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  splashColor: Colors.blue.withOpacity(0.1),
+                  highlightColor: Colors.blue.withOpacity(0.05),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -540,17 +547,44 @@ class HapInstaller extends StatelessWidget {
   }
 
   Future<void> _pickFromSharedFolder(BuildContext context, AppProvider provider) async {
-    // 刷新包文件列表
-    await provider.refreshPackageFiles();
-    
-    if (provider.packageFiles.isEmpty) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('共享文件夹中没有找到HAP文件'),
-            backgroundColor: Colors.orange,
+    // 显示加载对话框
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('正在连接打包机...'),
+            ],
           ),
-        );
+        ),
+      );
+    }
+    
+    try {
+      // 刷新包文件列表
+      await provider.refreshPackageFiles();
+      
+      // 关闭加载对话框
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      if (provider.packageFiles.isEmpty) {
+        if (context.mounted) {
+          _showConnectionErrorDialog(context, provider);
+        }
+        return;
+      }
+    } catch (e) {
+      // 关闭加载对话框
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        _showConnectionErrorDialog(context, provider);
       }
       return;
     }
@@ -626,6 +660,115 @@ class HapInstaller extends StatelessWidget {
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.month}/${dateTime.day} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  /// 显示连接错误对话框
+  void _showConnectionErrorDialog(BuildContext context, AppProvider provider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red),
+            SizedBox(width: 8),
+            Text('连接失败'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('无法连接到打包机或共享文件夹为空'),
+            const SizedBox(height: 12),
+            Text('打包机IP: ${provider.packageServerIp}'),
+            Text('文件路径: ${provider.sharedFolderPath}'),
+            const SizedBox(height: 12),
+            const Text(
+              '请检查：\n• 打包机IP地址是否正确\n• 网络连接是否正常\n• 共享文件夹中是否有HAP/APP文件\n• 打包机API服务是否启动',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // 打开设置对话框
+              _showSettingsDialog(context, provider);
+            },
+            child: const Text('设置'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // 重试连接
+              _pickFromSharedFolder(context, provider);
+            },
+            child: const Text('重试'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 显示设置对话框
+  void _showSettingsDialog(BuildContext context, AppProvider provider) {
+    final ipController = TextEditingController(text: provider.packageServerIp);
+    final pathController = TextEditingController(text: provider.sharedFolderPath);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('打包机设置'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: ipController,
+              decoration: const InputDecoration(
+                labelText: '打包机IP地址',
+                hintText: '例如: 192.168.1.100',
+                prefixIcon: Icon(Icons.computer),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pathController,
+              decoration: const InputDecoration(
+                labelText: 'HAP文件路径',
+                hintText: '例如: /Users/customer/harmony/haps/',
+                prefixIcon: Icon(Icons.folder),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.setPackageServerIp(ipController.text.trim());
+              provider.setSharedFolderPath(pathController.text.trim());
+              Navigator.of(context).pop();
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('设置已保存'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getLoadingText(AppProvider provider) {

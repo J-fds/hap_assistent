@@ -1,9 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import 'providers/app_provider.dart';
 import 'screens/home_screen.dart';
 
-void main() {
+void main() async {
+  // 确保Flutter绑定初始化
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Windows平台特殊配置
+  if (Platform.isWindows) {
+    // 设置系统UI覆盖样式
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+      ),
+    );
+    
+    // 设置首选方向（可选）
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+  
   runApp(const HapAssistantApp());
 }
 

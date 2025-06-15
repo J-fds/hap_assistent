@@ -32,51 +32,101 @@ jobs:
     - name: Build Windows app
       run: flutter build windows --release
       
-    - name: Create Windows Package
+    - name: Create Portable Package
       run: |
         mkdir package
         xcopy "build\windows\x64\runner\Release\*" "package\" /E /I
         
-    - name: Upload Windows Package
+    - name: Create Single File Package
+      run: |
+        mkdir single-file
+        copy "build\windows\x64\runner\Release\hap_assistant.exe" "single-file\"
+        copy "build\windows\x64\runner\Release\flutter_windows.dll" "single-file\"
+        
+    - name: Create MSIX Package
+      run: |
+        flutter pub add msix
+        flutter pub get
+        flutter build windows --release
+        dart run msix:create --store
+        
+    - name: Upload Portable Package
       uses: actions/upload-artifact@v4
       with:
-        name: windows-package
+        name: windows-portable-package
         path: package/
         
-    - name: Create Release Package
+    - name: Upload Single File Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-single-file
+        path: single-file/
+        
+    - name: Upload MSIX Package
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-msix
+        path: build/windows/x64/runner/Release/*.msix
+        
+    - name: Create Release Packages
       if: startsWith(github.ref, 'refs/tags/')
       run: |
         cd package
-        tar -czf ../hap_assistant_windows_${{ github.ref_name }}.tar.gz *
+        tar -czf ../hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz *
+        cd ../single-file
+        tar -czf ../hap_assistant_windows_single_${{ github.ref_name }}.tar.gz *
+        cd ..
+        if exist "build\windows\x64\runner\Release\*.msix" (
+          copy "build\windows\x64\runner\Release\*.msix" "hap_assistant_windows_store_${{ github.ref_name }}.msix"
+        )
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: hap_assistant_windows_${{ github.ref_name }}.tar.gz
+        files: |
+          hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz
+          hap_assistant_windows_single_${{ github.ref_name }}.tar.gz
+          hap_assistant_windows_store_${{ github.ref_name }}.msix
         name: Release ${{ github.ref_name }}
         body: |
           ## 鸿蒙HAP安装助手 ${{ github.ref_name }}
           
           ### 新功能
-          - Windows完整安装包自动构建
-          - 包含所有必需的依赖库
-          - 简化的应用图标设计
-          - HAP文件安装功能
+          - 优化Windows和macOS共享文件夹连接方式
+          - 提供三种Windows打包格式
+          - 增强错误处理和用户交互
+          - 支持多平台文件路径格式
           
-          ### 使用说明
-          1. 下载 `hap_assistant_windows_${{ github.ref_name }}.tar.gz`
-          2. 解压到任意目录
-          3. 运行 `hap_assistant.exe`
-          4. 确保所有文件保持在同一目录结构中
+          ### Windows版本说明
           
-          ### 包含文件
-          - `hap_assistant.exe` - 主程序
-          - `flutter_windows.dll` - Flutter运行时库
-          - `data/` - 应用数据和资源文件
+          #### 1. 便携版 (Portable)
+          - 文件: `hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz`
+          - 包含完整的运行环境和依赖库
+          - 解压即用，无需安装
+          - 适合临时使用或无管理员权限的环境
+          
+          #### 2. 精简版 (Single File)
+          - 文件: `hap_assistant_windows_single_${{ github.ref_name }}.tar.gz`
+          - 仅包含核心可执行文件
+          - 体积更小，启动更快
+          - 需要系统已安装Visual C++运行库
+          
+          #### 3. 应用商店版 (MSIX)
+          - 文件: `hap_assistant_windows_store_${{ github.ref_name }}.msix`
+          - 标准Windows应用包格式
+          - 支持自动更新和沙盒安全
+          - 可通过Microsoft Store分发
+          
+          ### 共享文件夹连接优化
+          - **Windows**: 支持UNC路径 (`\\IP\共享文件夹\路径`)
+          - **macOS**: 支持SMB协议 (`smb://IP/共享文件夹/路径`)
+          - **Linux**: 支持标准网络路径 (`//IP/共享文件夹/路径`)
+          - 自动路径格式转换和错误处理
           
           ### 系统要求
           - Windows 10 或更高版本
           - 64位操作系统
+          - .NET Framework 4.7.2+ (精简版需要)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
