@@ -2,12 +2,18 @@ name: Build macOS DMG
 
 on:
   push:
-    branches: [ main, master ]
     tags:
       - 'v*'
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: '是否创建Release'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
 
 jobs:
   build-macos:
@@ -63,12 +69,24 @@ jobs:
         name: HAP-Assistant-macOS-DMG
         path: HAP-Assistant-macOS.dmg
         
+    - name: Set Release Tag
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+      id: set_tag
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "tag=v$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        else
+          echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
       uses: softprops/action-gh-release@v1
       with:
         files: |
           HAP-Assistant-macOS.dmg
+        name: Release ${{ steps.set_tag.outputs.tag }}
+        tag_name: ${{ steps.set_tag.outputs.tag }}
         body: |
           ## macOS 版本
           

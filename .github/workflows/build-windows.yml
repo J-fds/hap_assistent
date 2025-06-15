@@ -2,12 +2,18 @@ name: Build Windows Installer
 
 on:
   push:
-    branches: [ main, master ]
     tags:
       - 'v*'
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: '是否创建Release'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
 
 jobs:
   build-windows:
@@ -59,26 +65,38 @@ jobs:
         
     # MSIX Package upload removed
         
+    - name: Set Release Tag
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+      id: set_tag
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "tag=v$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        else
+          echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        fi
+      shell: bash
+        
     - name: Create Release Packages
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
       run: |
         cd package
-        tar -czf ../hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz *
+        tar -czf ../hap_assistant_windows_portable_${{ steps.set_tag.outputs.tag }}.tar.gz *
         cd ../single-file
-        tar -czf ../hap_assistant_windows_single_${{ github.ref_name }}.tar.gz *
+        tar -czf ../hap_assistant_windows_single_${{ steps.set_tag.outputs.tag }}.tar.gz *
         cd ..
         # MSIX package creation removed
         
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz
-          hap_assistant_windows_single_${{ github.ref_name }}.tar.gz
-        name: Release ${{ github.ref_name }}
+          hap_assistant_windows_portable_${{ steps.set_tag.outputs.tag }}.tar.gz
+          hap_assistant_windows_single_${{ steps.set_tag.outputs.tag }}.tar.gz
+        name: Release ${{ steps.set_tag.outputs.tag }}
+        tag_name: ${{ steps.set_tag.outputs.tag }}
         body: |
-          ## 鸿蒙HAP安装助手 ${{ github.ref_name }}
+          ## 鸿蒙HAP安装助手 ${{ steps.set_tag.outputs.tag }}
           
           ### 新功能
           - 优化Windows和macOS共享文件夹连接方式
@@ -89,13 +107,13 @@ jobs:
           ### Windows版本说明
           
           #### 1. 便携版 (Portable)
-          - 文件: `hap_assistant_windows_portable_${{ github.ref_name }}.tar.gz`
+          - 文件: `hap_assistant_windows_portable_${{ steps.set_tag.outputs.tag }}.tar.gz`
           - 包含完整的运行环境和依赖库
           - 解压即用，无需安装
           - 适合临时使用或无管理员权限的环境
           
           #### 2. 精简版 (Single File)
-          - 文件: `hap_assistant_windows_single_${{ github.ref_name }}.tar.gz`
+          - 文件: `hap_assistant_windows_single_${{ steps.set_tag.outputs.tag }}.tar.gz`
           - 仅包含核心可执行文件
           - 体积更小，启动更快
           - 需要系统已安装Visual C++运行库
